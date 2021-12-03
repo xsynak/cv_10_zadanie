@@ -78,6 +78,9 @@ void MX_TIM2_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_1;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  LL_TIM_EnableIT_UPDATE(TIM2);
+   LL_TIM_EnableCounter(TIM2);
+   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
 }
 
 /* USER CODE BEGIN 1 */

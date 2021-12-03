@@ -42,6 +42,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+uint8_t intensity = 0;
+uint8_t brighter = 1;
 
 /* USER CODE END PV */
 
@@ -205,7 +207,16 @@ void SysTick_Handler(void)
 void DMA1_Channel6_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel6_IRQn 0 */
-
+	if(LL_DMA_IsActiveFlag_TC6(DMA1) == SET)
+		{
+			USART2_CheckDmaReception();
+			LL_DMA_ClearFlag_TC6(DMA1);
+		}
+		else if(LL_DMA_IsActiveFlag_HT6(DMA1) == SET)
+		{
+			USART2_CheckDmaReception();
+			LL_DMA_ClearFlag_HT6(DMA1);
+		}
   /* USER CODE END DMA1_Channel6_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
@@ -219,7 +230,13 @@ void DMA1_Channel6_IRQHandler(void)
 void DMA1_Channel7_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel7_IRQn 0 */
+	if(LL_DMA_IsActiveFlag_TC7(DMA1) == SET)
+		{
+			LL_DMA_ClearFlag_TC7(DMA1);
 
+			while(LL_USART_IsActiveFlag_TC(USART2) == RESET);
+			LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_7);
+		}
   /* USER CODE END DMA1_Channel7_IRQn 0 */
 
   /* USER CODE BEGIN DMA1_Channel7_IRQn 1 */
@@ -233,7 +250,35 @@ void DMA1_Channel7_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM2)){
+		if (!is_manual) {
+			if (brighter) {
+				setDutyCycle(intensity++);
+				if (intensity >= 99) {
+					brighter = 0;
+				}
+			}
+			else {
+				setDutyCycle(intensity--);
+				if (intensity <= 0){
+					brighter = 1;
+				}
+			}
+		}
+		if (is_manual)
+		{
+			if (intensity <  pwm_intensity)
+			{
+				setDutyCycle(intensity++);
+			}
+			if (intensity >  pwm_intensity)
+			{
+				setDutyCycle(intensity--);
+			}
+		}
+	}
 
+	LL_TIM_ClearFlag_UPDATE(TIM2);
   /* USER CODE END TIM2_IRQn 0 */
   /* USER CODE BEGIN TIM2_IRQn 1 */
 
@@ -246,7 +291,11 @@ void TIM2_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
-
+	if(LL_USART_IsActiveFlag_IDLE(USART2))
+	{
+		USART2_CheckDmaReception();
+		LL_USART_ClearFlag_IDLE(USART2);
+	}
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 

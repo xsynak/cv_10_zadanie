@@ -32,10 +32,14 @@ extern "C" {
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
+#define DMA_USART2_BUFFER_SIZE 256
 
 /* USER CODE END Private defines */
 
 void MX_USART2_UART_Init(void);
+void USART2_PutBuffer(uint8_t *buffer, uint8_t length);
+void USART2_CheckDmaReception(void);
+void USART2_RegisterCallback(void *callback);
 
 /* USER CODE BEGIN Prototypes */
 

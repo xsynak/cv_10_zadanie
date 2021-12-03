@@ -67,7 +67,10 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-
+void proccesDmaData(const uint8_t* sign, uint8_t length);
+void setDutyCycle(uint8_t D);
+uint8_t is_manual;
+uint8_t pwm_intensity;
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

@@ -1,4 +1,4 @@
-/* USER CODE BEGIN Header */
+ /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
   * @file           : main.c
@@ -23,12 +23,13 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "stm32f3xx_it.h"
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
-
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
@@ -36,6 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,9 +59,10 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void proccesDmaData(const uint8_t* sign, uint8_t length);
 /* USER CODE END 0 */
-
+uint8_t is_dollar = 0;
+uint8_t is_manual = 0;
 /**
   * @brief  The application entry point.
   * @retval int
@@ -98,6 +101,9 @@ int main(void)
   MX_TIM2_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  USART2_RegisterCallback(proccesDmaData);
+
+  uint8_t tx_data[500];
 
   /* USER CODE END 2 */
 
@@ -106,6 +112,13 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  uint8_t buffer_mem_occupied = DMA_USART2_BUFFER_SIZE - LL_DMA_GetDataLength(DMA1, LL_DMA_CHANNEL_6);
+
+	 	  float total_load = (float)buffer_mem_occupied/DMA_USART2_BUFFER_SIZE*100;
+
+	 	  USART2_PutBuffer(tx_data, sprintf((char*)tx_data, "Buffer capacity: %d bytes, occupied memory: %d bytes, load [in %%]: %3.2f , pwm intensity: %d \n\r",\
+	 	  								  DMA_USART2_BUFFER_SIZE,buffer_mem_occupied, total_load,intensity));
+	 	  LL_mDelay(3000);
 
     /* USER CODE BEGIN 3 */
   }
@@ -143,6 +156,80 @@ void SystemClock_Config(void)
   LL_Init1msTick(8000000);
   LL_SetSystemCoreClock(8000000);
 }
+
+uint8_t pwm_intensity;
+
+void proccesDmaData(const uint8_t* sign,uint8_t length)
+{
+	uint8_t cutted_str[8];
+	uint8_t pwm_found = 0,str_pos = 0,pwm_pos = 0;
+	uint8_t pwm_intensity_str[2];
+
+
+
+	for(int i = 0; i< length; i++){
+
+
+		if(*(sign+i) == '$'){
+			is_dollar = 1;
+		}
+
+		if(is_dollar){
+			cutted_str[str_pos] = *(sign+i);
+			str_pos++;
+
+			if(strstr(cutted_str,"$auto$")){
+				is_manual = 0;
+				memset(cutted_str,0,strlen(cutted_str));
+				str_pos = 0;
+				is_dollar = 0;
+			}
+			else if(strstr(cutted_str,"$manual$")){
+				pwm_intensity = intensity;
+				is_manual = 1;
+				memset(cutted_str,0,strlen(cutted_str));
+				str_pos = 0;
+				is_dollar = 0;
+			}
+
+			if (pwm_found){
+				if(pwm_pos == 2){
+					if(cutted_str[str_pos-1] == '$'){
+						sscanf(pwm_intensity_str, "%d", &pwm_intensity);
+					}
+					memset(pwm_intensity_str,0,strlen(pwm_intensity_str));
+					pwm_found = 0;
+					pwm_pos = 0;
+					is_dollar = 0;
+					str_pos = 0;
+				}
+				else if(cutted_str[str_pos-1]>= '0' && cutted_str[str_pos-1] <= '9'){
+					pwm_intensity_str[pwm_pos] = cutted_str[str_pos-1];
+					pwm_pos ++;
+
+				}
+			}
+			if(is_manual && (strstr(cutted_str,"$PWM"))){
+				pwm_found = 1;
+			}
+		}
+
+		else {
+			memset(cutted_str,0,strlen(cutted_str));
+		}
+
+	}
+
+
+	return;
+}
+
+void setDutyCycle(uint8_t D){
+	uint8_t pulse_length = 0;
+	pulse_length = ((TIM2->ARR) * D) / 100;
+	TIM2->CCR1 = pulse_length;
+}
+
 
 /* USER CODE BEGIN 4 */
 
